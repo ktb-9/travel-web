@@ -1,4 +1,4 @@
-import { useState, ChangeEvent } from "react";
+import { useState, ChangeEvent, useRef, useEffect } from "react";
 import { ImagePlus } from "lucide-react";
 
 interface FileInputEvent extends ChangeEvent<HTMLInputElement> {
@@ -7,11 +7,126 @@ interface FileInputEvent extends ChangeEvent<HTMLInputElement> {
   };
 }
 
-export default function PhotoCollection(): JSX.Element {
+export default function ImageView(): JSX.Element {
   const [previewImage, setPreviewImage] = useState<string | null>(
     "/api/placeholder/400/500"
   );
   const [thumbnails, setThumbnails] = useState<string[]>([]);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const contextRef = useRef<CanvasRenderingContext2D | null>(null);
+  const imageRef = useRef<HTMLImageElement | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [brushWidth, setBrushWidth] = useState(40);
+
+  // Canvas 크기를 컨테이너에 맞추는 함수
+  const resizeCanvas = () => {
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
+
+    const rect = container.getBoundingClientRect();
+    canvas.style.width = "100%";
+    canvas.style.height = "400px";
+
+    // 캔버스의 실제 크기를 컨테이너와 동일하게 설정
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+
+    const context = canvas.getContext("2d");
+    if (!context) return;
+
+    context.lineCap = "round";
+    context.lineWidth = brushWidth;
+    context.globalAlpha = 1;
+
+    contextRef.current = context;
+
+    // 이미지가 있다면 다시 그리기
+    if (imageRef.current) {
+      const img = imageRef.current;
+      const drawWidth = rect.width;
+      const drawHeight = rect.width;
+
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(img, 0, 0, drawWidth, drawHeight);
+    }
+  };
+
+  useEffect(() => {
+    const handleResize = () => {
+      resizeCanvas();
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    resizeCanvas();
+  }, [brushWidth]);
+
+  useEffect(() => {
+    if (!previewImage) return;
+
+    const image = new Image();
+    image.src = previewImage;
+    imageRef.current = image;
+
+    image.onload = () => {
+      resizeCanvas();
+    };
+  }, [previewImage]);
+
+  const getCoordinates = (
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
+  ) => {
+    if (!canvasRef.current) return { x: 0, y: 0 };
+
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+
+    if ("touches" in e) {
+      return {
+        x: e.touches[0].clientX - rect.left,
+        y: e.touches[0].clientY - rect.top,
+      };
+    }
+    return {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    };
+  };
+
+  const startDrawing = (
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
+  ) => {
+    e.preventDefault();
+    if (!contextRef.current) return;
+
+    const { x, y } = getCoordinates(e);
+    contextRef.current.beginPath();
+    contextRef.current.moveTo(x, y);
+    setIsDrawing(true);
+  };
+
+  const draw = (
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
+  ) => {
+    e.preventDefault();
+    if (!isDrawing || !contextRef.current) return;
+
+    const { x, y } = getCoordinates(e);
+    contextRef.current.lineTo(x, y);
+    contextRef.current.stroke();
+  };
+
+  const stopDrawing = () => {
+    if (!contextRef.current) return;
+    contextRef.current.closePath();
+    setIsDrawing(false);
+  };
 
   const handleImageUpload = (e: FileInputEvent): void => {
     const file = e.target.files[0];
@@ -26,21 +141,25 @@ export default function PhotoCollection(): JSX.Element {
     }
   };
 
-  // 썸네일 클릭 시 메인 이미지로 설정하는 핸들러 추가
   const handleThumbnailClick = (imageUrl: string) => {
     setPreviewImage(imageUrl);
   };
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
-      {/* 이미지 컨테이너  */}
-      <div className="relative w-full aspect-[3/4]">
+      <div ref={containerRef} className="relative w-full h-[400px]">
         {previewImage ? (
           <div className="relative w-full h-full group">
-            <img
-              src={previewImage}
-              alt="Main preview"
-              className="w-full h-full object-cover"
+            <canvas
+              ref={canvasRef}
+              onMouseDown={startDrawing}
+              onMouseMove={draw}
+              onMouseUp={stopDrawing}
+              onMouseLeave={stopDrawing}
+              onTouchStart={startDrawing}
+              onTouchMove={draw}
+              onTouchEnd={stopDrawing}
+              className="absolute inset-0 cursor-crosshair touch-none"
             />
           </div>
         ) : (
@@ -57,7 +176,19 @@ export default function PhotoCollection(): JSX.Element {
         )}
       </div>
 
-      {/* 섭네일 갤러리*/}
+      <div className="flex items-center gap-2 p-4">
+        <label className="text-sm font-medium">Brush width:</label>
+        <input
+          type="range"
+          min="1"
+          max="100"
+          value={brushWidth}
+          onChange={(e) => setBrushWidth(parseInt(e.target.value))}
+          className="w-32"
+        />
+        <span className="text-sm w-12">{brushWidth}px</span>
+      </div>
+
       <div className="flex gap-2 p-4 overflow-x-auto h-auto">
         {thumbnails.map((thumb, index) => (
           <div
@@ -83,7 +214,6 @@ export default function PhotoCollection(): JSX.Element {
         </label>
       </div>
 
-      {/* 프롬프트 */}
       <div className="mt-auto p-4">
         <div className="relative">
           <input
