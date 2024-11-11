@@ -7,45 +7,44 @@ interface FileInputEvent extends ChangeEvent<HTMLInputElement> {
   };
 }
 
-export default function Content(): JSX.Element {
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
+export default function PhotoCollection(): JSX.Element {
+  const [previewImage, setPreviewImage] = useState<string | null>(
+    "/api/placeholder/400/500"
+  );
+  const [thumbnails, setThumbnails] = useState<string[]>([]);
 
   const handleImageUpload = (e: FileInputEvent): void => {
     const file = e.target.files[0];
     if (file && file.type.startsWith("image/")) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPreviewImage(reader.result as string);
+        const result = reader.result as string;
+        setPreviewImage(result);
+        setThumbnails((prev) => [...prev, result]);
       };
       reader.readAsDataURL(file);
     }
   };
 
+  // 썸네일 클릭 시 메인 이미지로 설정하는 핸들러 추가
+  const handleThumbnailClick = (imageUrl: string) => {
+    setPreviewImage(imageUrl);
+  };
+
   return (
-    <section className="flex flex-col ">
-      <div className="relative w-full h-[350px]">
+    <div className="flex flex-col min-h-screen bg-white">
+      {/* 이미지 컨테이너  */}
+      <div className="relative w-full aspect-[3/4]">
         {previewImage ? (
           <div className="relative w-full h-full group">
             <img
               src={previewImage}
-              alt="Uploaded preview"
-              className="w-full h-full "
+              alt="Main preview"
+              className="w-full h-full object-cover"
             />
-            <label className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-              <span className="text-white flex items-center gap-2">
-                <ImagePlus size={24} />
-                이미지 변경
-              </span>
-            </label>
           </div>
         ) : (
-          <label className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50">
+          <label className="absolute inset-0 flex flex-col items-center justify-center bg-gray-100 cursor-pointer">
             <input
               type="file"
               accept="image/*"
@@ -57,6 +56,34 @@ export default function Content(): JSX.Element {
           </label>
         )}
       </div>
+
+      {/* 섭네일 갤러리*/}
+      <div className="flex gap-2 p-4 overflow-x-auto h-auto">
+        {thumbnails.map((thumb, index) => (
+          <div
+            key={index}
+            className="flex-shrink-0 w-20 h-20 border rounded-lg overflow-hidden cursor-pointer"
+            onClick={() => handleThumbnailClick(thumb)}
+          >
+            <img
+              src={thumb}
+              alt={`Thumbnail ${index + 1}`}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        ))}
+        <label className="flex-shrink-0 w-20 h-20 flex items-center justify-center border rounded-lg cursor-pointer bg-gray-50">
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="hidden"
+          />
+          <ImagePlus className="w-6 h-6 text-gray-400" />
+        </label>
+      </div>
+
+      {/* 프롬프트 */}
       <div className="mt-auto p-4">
         <div className="relative">
           <input
@@ -86,6 +113,6 @@ export default function Content(): JSX.Element {
           사진 저장
         </button>
       </div>
-    </section>
+    </div>
   );
 }
