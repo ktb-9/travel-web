@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Props) {
   return (
     <html lang="en">
-      <body className="bg-[var(--primary-bg-color)]">{children}</body>
+      <body className="">{children}</body>
     </html>
   );
 }

@@ -1,3 +1,9 @@
+import Content from "../_components/content/content";
+
 export default function Image() {
-  return <div>이미지 페이지입니다.</div>;
+  return (
+    <div className="absolute flex flex-col w-full h-full">
+      <Content />
+    </div>
+  );
 }
