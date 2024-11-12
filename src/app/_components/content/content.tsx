@@ -6,8 +6,13 @@ interface FileInputEvent extends ChangeEvent<HTMLInputElement> {
     files: FileList;
   };
 }
+interface ImageParams {
+  groupId: string;
+  postId: string;
+}
 
 export default function ImageView(): JSX.Element {
+  const [params, setParams] = useState<ImageParams | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(
     "/api/placeholder/400/500"
   );
@@ -19,6 +24,14 @@ export default function ImageView(): JSX.Element {
 
   const [isDrawing, setIsDrawing] = useState(false);
   const [brushWidth, setBrushWidth] = useState(40);
+  const getInfo = (event: MessageEvent) => {
+    // 받은 메시지를 다시 파싱 해서 state에 저장
+    const { groupId, postId } = JSON.parse(event.data);
+    setParams({ groupId, postId });
+  };
+  useEffect(() => {
+    window.addEventListener("message", getInfo);
+  }, []);
 
   // Canvas 크기를 컨테이너에 맞추는 함수
   const resizeCanvas = () => {
@@ -162,6 +175,10 @@ export default function ImageView(): JSX.Element {
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
+      <span>
+        {params?.groupId}
+        {params?.postId}
+      </span>
       <div ref={containerRef} className="relative w-full h-[400px]">
         {previewImage ? (
           <div className="relative w-full h-full group">
