@@ -40,17 +40,33 @@ export default function ImageView(): JSX.Element {
     context.lineCap = "round";
     context.lineWidth = brushWidth;
     context.globalAlpha = 1;
+    context.strokeStyle = "rgba(128, 128, 128, 0.1)";
 
     contextRef.current = context;
 
     // 이미지가 있다면 다시 그리기
     if (imageRef.current) {
       const img = imageRef.current;
-      const drawWidth = rect.width;
-      const drawHeight = rect.width;
+      const imgRatio = img.naturalWidth / img.naturalHeight;
+      const containerRatio = rect.width / rect.height;
+
+      let drawWidth, drawHeight;
+      if (imgRatio > containerRatio) {
+        // 이미지가 더 넓은 경우
+        drawWidth = rect.width;
+        drawHeight = rect.width / imgRatio;
+      } else {
+        // 이미지가 더 높은 경우
+        drawHeight = rect.height;
+        drawWidth = rect.height * imgRatio;
+      }
+
+      // 이미지를 중앙에 배치
+      const x = (rect.width - drawWidth) / 2;
+      const y = (rect.height - drawHeight) / 2;
 
       context.clearRect(0, 0, canvas.width, canvas.height);
-      context.drawImage(img, 0, 0, drawWidth, drawHeight);
+      context.drawImage(img, x, y, drawWidth, drawHeight);
     }
   };
 
@@ -73,7 +89,6 @@ export default function ImageView(): JSX.Element {
     const image = new Image();
     image.src = previewImage;
     imageRef.current = image;
-
     image.onload = () => {
       resizeCanvas();
     };
