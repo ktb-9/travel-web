@@ -4,7 +4,7 @@ kind: Deployment
 metadata:
   name: client
 spec:
-  replicas: { { .Values.client.replicaCount } }
+  replicas: { { .Values.client.replicaCount | default 1 } }
   selector:
     matchLabels:
       app: client
