@@ -1,0 +1,10 @@
+# client-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: client-config
+  labels:
+    app: travel-client
+data:
+  API_URL: "{{ .Values.client.config.serverUrl }}"
+  ENVIRONMENT: "production"
