@@ -4,9 +4,9 @@ kind: Service
 metadata:
   name: client
 spec:
-  type: { { .Values.client.service.type } }
+  type: {{ .Values.client.service.type }}
   ports:
-    - port: { { .Values.client.service.port } }
-      targetPort: { { .Values.client.service.targetPort } }
+    - port: {{ .Values.client.service.port }}
+      targetPort: {{ .Values.client.service.targetPort }}
   selector:
     app: client

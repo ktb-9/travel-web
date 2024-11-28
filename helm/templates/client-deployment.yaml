@@ -4,7 +4,7 @@ kind: Deployment
 metadata:
   name: client
 spec:
-  replicas: { { .Values.client.replicaCount | default 1 } }
+  replicas: {{ .Values.client.replicaCount }}
   selector:
     matchLabels:
       app: client
@@ -16,9 +16,9 @@ spec:
       containers:
         - name: client
           image: "{{ .Values.client.image.repository }}:{{ .Values.client.image.tag }}"
-          imagePullPolicy: { { .Values.global.imagePullPolicy } }
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
           ports:
-            - containerPort: { { .Values.client.service.targetPort } }
+            - containerPort: {{ .Values.client.service.targetPort }}
           env:
             - name: CLIENT_PORT
               value: "3000"
