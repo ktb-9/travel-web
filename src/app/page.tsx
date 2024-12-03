@@ -1,6 +1,6 @@
 "use client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import Image from "./_containers/Image";
+import Image from "./(pages)/Image";
 
 export default function ImagePage() {
   //리액트 쿼리 적용
