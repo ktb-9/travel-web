@@ -2,11 +2,10 @@ pipeline {
     agent any
 
     environment {
-        REGISTRY = 'yoonjini/ktb-travel-client' // Docker Hub 레지스트리 이름
-        IMAGE_TAG = "${env.BUILD_NUMBER}" // 이미지 태그는 빌드 번호로 설정
+        REGISTRY = 'yoonjini/ktb-travel-client'
+        IMAGE_TAG = "${env.BUILD_NUMBER}"
         DOCKER_IMAGE = "${REGISTRY}:${IMAGE_TAG}"
         S3_BUCKET = "zero-dang.com" // S3 버킷 이름
-        AWS_CREDENTIALS = credentials('aws-s3-credentials') // AWS 자격증명
         DOCKER_CREDENTIALS = credentials('docker-hub-credentials') // Docker Hub 자격증명
     }
 
@@ -14,8 +13,8 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout([$class: 'GitSCM',
-                          branches: [[name: 'dev']],
-                          userRemoteConfigs: [[url: 'https://github.com/ktb-9/travel-web.git', credentialsId: 'riffletrip-github-app']]
+                          branches: [[name: '*/dev']],
+                          userRemoteConfigs: [[url: 'https://github.com/ktb-9/travel-web.git', credentialsId: 'riffletrip-github-app2']]
                 ])
             }
         }
@@ -33,25 +32,34 @@ pipeline {
             }
         }
 
-        stage('Run and Export Static Files') {
+         stage('Update Helm Chart in Infra Branch') {
             steps {
                 script {
-                    sh """
-                    docker run --rm -v $PWD/out:/app/out $DOCKER_IMAGE sh -c "
-                    npm run export &&
-                    cp -r /app/out /out
-                    "
-                    """
+                    withCredentials([usernamePassword(credentialsId: 'travel-jenkins-prac', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
+                        sh '''
+                        git config --global user.email "skyj217@gmail.com"
+                        git config --global user.name "iyxxnjin"
+                        git checkout infra
+                        sed -i "s/tag:.*/tag: ${IMAGE_TAG}/g" helm/values.yaml
+                        git add helm/values.yaml
+                        git commit -m "Chore: update image tag to ${IMAGE_TAG}" || echo "No changes to commit"
+                        git push https://${GIT_USER}:${GIT_PASS}@github.com/ktb-9/travel-web.git infra
+                        '''
+                    }
                 }
             }
         }
 
-         stage('Upload to S3') {
+
+        stage('ArgoCD Sync') {
             steps {
-                withAWS(credentials: 'aws-s3-credentials') {
-                    sh """
-                    aws s3 sync out s3://$S3_BUCKET --delete
-                    """
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'argocd-credentials', usernameVariable: 'ARGOCD_USER', passwordVariable: 'ARGOCD_PASS')]) {
+                        sh '''
+                        argocd login argocd.zero-dang.com --username ${ARGOCD_USER} --password ${ARGOCD_PASS} --insecure
+                        argocd app sync riffletrip-app
+                        '''
+                    }
                 }
             }
         }
