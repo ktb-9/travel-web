@@ -9,7 +9,7 @@ client:
     repository:
       ktb9/travel-client
       # repository: yoonjini/ktb-travel-client
-    tag: 8
+    tag: 9
   service:
     type: ClusterIP
     port: 80
