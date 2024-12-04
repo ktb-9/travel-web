@@ -12,9 +12,13 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
+                script {
+                // 현재 커밋 해시 가져오기
+                    env.GIT_COMMIT_HASH = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                }
                 checkout([$class: 'GitSCM',
                           branches: [[name: '*/dev']],
-                          userRemoteConfigs: [[url: 'https://github.com/ktb-9/travel-web.git', credentialsId: 'riffletrip-github-app2']]
+                          userRemoteConfigs: [[url: 'https://github.com/ktb-9/travel-web.git']]
                 ])
             }
         }
@@ -69,5 +73,39 @@ pipeline {
         always {
             cleanWs() // 작업공간 정리
         }
+            success {
+                script { // 빌드 성공 시 디스코드 알림
+                    withCredentials([string(credentialsId: 'discord-webhook', variable: 'DISCORD_WEBHOOK')]) {
+                        discordSend description: """
+                        ✅ Build Success
+                        실행 시간: ${currentBuild.duration / 1000}s
+                        커밋 해시: ${env.GIT_COMMIT_HASH}
+                        제목: ${currentBuild.displayName}
+                        결과: ${currentBuild.result}
+                        """,
+                        link: env.BUILD_URL,
+                        result: currentBuild.result,
+                        title: "${env.JOB_NAME}: ${currentBuild.displayName} 성공",
+                        webhookURL: "$DISCORD_WEBHOOK"
+                    }
+                }
+            }
+            failure {
+                script { // 빌드 실패 시 디스코드 알림
+                    withCredentials([string(credentialsId: 'discord-webhook', variable: 'DISCORD_WEBHOOK')]) {
+                        discordSend description: """
+                        ❌ Build Failed
+                        실행 시간: ${currentBuild.duration / 1000}s
+                        커밋 해시: ${env.GIT_COMMIT_HASH}
+                        제목: ${currentBuild.displayName}
+                        결과: ${currentBuild.result}
+                        """,
+                        link: env.BUILD_URL,
+                        result: currentBuild.result,
+                        title: "${env.JOB_NAME}: ${currentBuild.displayName} 실패",
+                        webhookURL: "$DISCORD_WEBHOOK"
+                    }
+                }
+            }
+        }
     }
-}
