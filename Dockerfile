@@ -15,12 +15,14 @@ RUN npm install
 COPY . .
 RUN npm run build
 
-# Nginx 이미지 기반으로 배포 설정
-FROM nginx:alpine
-COPY --from=build /usr/src/app/.next  /usr/share/nginx/html
+# PM2 설치
+RUN npm install -g pm2
 
-# Nginx 포트 설정
+# 환경 설정
+ENV NODE_ENV=production
+
+# 포트 설정
 EXPOSE 80
 
-# Nginx 실행
-CMD ["nginx", "-g", "daemon off;"]
+# PM2 실행
+CMD ["pm2-runtime", "start", "npm", "--", "start"]
