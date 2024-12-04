@@ -14,7 +14,7 @@ pipeline {
             steps {
                 checkout([$class: 'GitSCM',
                           branches: [[name: '*/dev']],
-                          userRemoteConfigs: [[url: 'https://github.com/ktb-9/travel-web.git', credentialsId: 'riffletrip-github-app']]
+                          userRemoteConfigs: [[url: 'https://github.com/ktb-9/travel-web.git', credentialsId: 'riffletrip-github-app2']]
                 ])
             }
         }
@@ -57,7 +57,7 @@ pipeline {
                     withCredentials([usernamePassword(credentialsId: 'argocd-credentials', usernameVariable: 'ARGOCD_USER', passwordVariable: 'ARGOCD_PASS')]) {
                         sh '''
                         argocd login argocd.zero-dang.com --username ${ARGOCD_USER} --password ${ARGOCD_PASS} --insecure
-                        argocd app sync riffletrip-server-node
+                        argocd app sync riffletrip-app
                         '''
                     }
                 }
