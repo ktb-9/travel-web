@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        REGISTRY = 'yoonjini/ktb-travel-client'
+        REGISTRY = 'ktb9/travel-client'
         IMAGE_TAG = "${env.BUILD_NUMBER}"
         DOCKER_IMAGE = "${REGISTRY}:${IMAGE_TAG}"
         S3_BUCKET = "zero-dang.com" // S3 버킷 이름
