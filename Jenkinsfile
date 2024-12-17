@@ -17,7 +17,7 @@ pipeline {
                     env.GIT_COMMIT_HASH = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
                 }
                 checkout([$class: 'GitSCM',
-                          branches: [[name: '*/dev']],
+                          branches: [[name: '*/main']],
                           userRemoteConfigs: [[url: 'https://github.com/ktb-9/travel-web.git']]
                 ])
             }
@@ -72,7 +72,12 @@ pipeline {
     post {
         always {
             cleanWs() // 작업공간 정리
-        }
+                script {
+                    sh '''
+                    docker system prune -a -f
+                    '''
+                }
+            }
             success {
                 script { // 빌드 성공 시 디스코드 알림
                     withCredentials([string(credentialsId: 'discord-webhook', variable: 'DISCORD_WEBHOOK')]) {
