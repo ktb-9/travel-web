@@ -2,7 +2,7 @@ import axios from "axios";
 
 const postImageLink = async (userId: number, body: object) => {
   const { data } = await axios.post(
-    `http://localhost:8000/image/${userId}`,
+    `https://server.zero-dang.com/image/${userId}`,
     body,
     {
       headers: {

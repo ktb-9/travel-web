@@ -3,7 +3,7 @@ import axios from "axios";
 const postImage = async (formData: FormData) => {
   try {
     const { data } = await axios.post(
-      "http://0.0.0.0:5002/api/edit-image",
+      "https://ai.zero-dang.com/api/edit-image",
       formData,
       {
         headers: {
