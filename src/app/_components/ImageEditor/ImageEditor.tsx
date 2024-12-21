@@ -374,6 +374,48 @@ export const ImageEditor: React.FC = () => {
       setError("이미지 선택 중 오류가 발생했습니다");
     }
   };
+  const resetCanvases = () => {
+    const maskCanvas = canvas.maskCanvasRef.current;
+    const displayCanvas = canvas.displayCanvasRef.current;
+    const mainCanvas = canvas.canvasRef.current;
+
+    if (!maskCanvas || !displayCanvas || !mainCanvas) return;
+
+    const maskCtx = maskCanvas.getContext("2d");
+    const displayCtx = displayCanvas.getContext("2d");
+
+    if (!maskCtx || !displayCtx) return;
+
+    // 마스크를 다 블랙으로
+    maskCtx.fillStyle = "black";
+    maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+
+    // 이미지를 원상 복귀
+    displayCtx.clearRect(0, 0, displayCanvas.width, displayCanvas.height);
+    displayCtx.drawImage(
+      mainCanvas,
+      0,
+      0,
+      displayCanvas.width,
+      displayCanvas.height
+    );
+
+    // 히스토리 리셋
+    drawingHistory.reset();
+
+    // 히스토리 새로운 상태
+    const newInitialState = {
+      maskData: maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height),
+      previewData: displayCtx.getImageData(
+        0,
+        0,
+        displayCanvas.width,
+        displayCanvas.height
+      ),
+    };
+
+    drawingHistory.addToHistory(newInitialState);
+  };
 
   // 새 이미지 추가 처리
   const handleImageAdd = (file: File) => {
@@ -397,17 +439,7 @@ export const ImageEditor: React.FC = () => {
             onBrushSizeChange={setBrushSize}
             onUndo={handleUndo}
             onRedo={handleRedo}
-            onReset={() => {
-              const maskCanvas = canvas.maskCanvasRef.current;
-              if (maskCanvas) {
-                const maskCtx = maskCanvas.getContext("2d");
-                if (maskCtx) {
-                  maskCtx.fillStyle = "black";
-                  maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
-                  saveDrawingState();
-                }
-              }
-            }}
+            onReset={resetCanvases}
             canUndo={drawingHistory.historyIndex > 0}
             canRedo={
               drawingHistory.historyIndex <
