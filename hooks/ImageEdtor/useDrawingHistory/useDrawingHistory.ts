@@ -28,7 +28,8 @@ export const useDrawingHistory = () => {
 
   // 초기화
   const reset = () => {
-    setHistoryIndex(0);
+    setDrawingHistory([]);
+    setHistoryIndex(-1);
   };
 
   return {

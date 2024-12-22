@@ -1,16 +1,50 @@
-import { Send } from "lucide-react";
+import { Send, Download } from "lucide-react";
 import { BottomBarProps } from "../../../../../type/BottomBar/BottomBar";
 import { IconButton } from "../../Common/IconButton/IconButton";
 import { Button } from "../../Common/Button/Button";
 
-export const BottomBar: React.FC<BottomBarProps> = ({
+interface ExtendedBottomBarProps extends BottomBarProps {
+  currentImageUrl?: string; // Optional URL of the current image
+}
+
+export const BottomBar: React.FC<ExtendedBottomBarProps> = ({
   mode,
   prompt,
   isLoading,
   onPromptChange,
   onEdit,
   onRemove,
+  currentImageUrl,
 }) => {
+  const handleDownload = async () => {
+    if (!currentImageUrl) return;
+
+    try {
+      // Fetch the image as a blob
+      const response = await fetch(currentImageUrl);
+      const blob = await response.blob();
+
+      // Create a temporary URL for the blob
+      const url = window.URL.createObjectURL(blob);
+
+      // Create a temporary anchor element
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `edited-image-${Date.now()}.png`; // Dynamic filename with timestamp
+
+      // Programmatically click the link to trigger download
+      document.body.appendChild(link);
+      link.click();
+
+      // Clean up
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error downloading image:", error);
+      // You might want to add error handling here
+    }
+  };
+
   return (
     <div className="fixed bottom-0 left-0 right-0 z-20 bg-white border-t shadow-lg">
       <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6">
@@ -37,11 +71,18 @@ export const BottomBar: React.FC<BottomBarProps> = ({
         <Button
           variant={mode === "remove" ? "danger" : "primary"}
           size="lg"
-          onClick={mode === "remove" ? onRemove : onEdit}
-          disabled={isLoading || (mode === "edit" && !prompt.trim())}
+          onClick={mode === "remove" ? onRemove : handleDownload}
+          disabled={isLoading || (mode === "edit" && !currentImageUrl)}
           className="w-full"
         >
-          {mode === "remove" ? "선택 영역 제거하기" : "편집 완료"}
+          {mode === "remove" ? (
+            "선택 영역 제거하기"
+          ) : (
+            <div className="flex items-center justify-center gap-2">
+              <Download size={20} />
+              <span>이미지 다운로드</span>
+            </div>
+          )}
         </Button>
       </div>
     </div>
