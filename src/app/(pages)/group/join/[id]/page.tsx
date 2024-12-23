@@ -16,7 +16,7 @@ const GroupJoinPage = () => {
       try {
         // 앱 스킴을 통해 앱으로 이동
         // 로그인되어 있지 않으면 로그인 페이지로, 되어있으면 그룹 참여 페이지로
-        const appScheme = `myapp://group/join/${id}`;
+        const appScheme = `rippletrip://group/join/${id}`;
 
         window.location.href = appScheme;
 
