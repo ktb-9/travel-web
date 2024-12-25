@@ -1,9 +1,9 @@
-import { Send, Download } from "lucide-react";
+import { Send, Download, Link } from "lucide-react";
 import { BottomBarProps } from "../../../../../type/BottomBar/BottomBar";
 import { IconButton } from "../../Common/IconButton/IconButton";
 import { Button } from "../../Common/Button/Button";
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 interface ExtendedBottomBarProps extends BottomBarProps {
   currentImageUrl: File | null;
@@ -19,82 +19,45 @@ export const BottomBar: React.FC<ExtendedBottomBarProps> = ({
   currentImageUrl,
 }) => {
   const [isMobile, setIsMobile] = useState(false);
-  const [imageFrame, setImageFrame] = useState<HTMLDivElement | null>(null);
+  const [copyStatus, setCopyStatus] = useState<string>("");
+  const [imageUrl, setImageUrl] = useState<string>("");
 
   useEffect(() => {
     setIsMobile(/iPhone|iPad|iPod|Android/i.test(window.navigator.userAgent));
-
-    // Create overlay container
-    const overlay = document.createElement("div");
-    overlay.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0,0,0,0.9);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
-      z-index: 9999;
-      padding: 20px;
-    `;
-
-    document.body.appendChild(overlay);
-    setImageFrame(overlay);
-
-    return () => {
-      document.body.removeChild(overlay);
-    };
   }, []);
 
-  const showImage = (imageUrl: string) => {
-    if (!imageFrame) return;
+  const copyToClipboard = useCallback((text: string) => {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.left = "0";
+    textArea.style.top = "0";
+    textArea.style.opacity = "0";
+    document.body.appendChild(textArea);
 
-    // Clear previous content
-    imageFrame.innerHTML = "";
+    if (navigator.userAgent.match(/ipad|iphone/i)) {
+      const range = document.createRange();
+      range.selectNodeContents(textArea);
+      const selection = window.getSelection();
+      if (selection) {
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+      textArea.setSelectionRange(0, 999999);
+    } else {
+      textArea.select();
+    }
 
-    // Create image element
-    const img = document.createElement("img");
-    img.src = imageUrl;
-    img.style.cssText =
-      "max-width: 100%; max-height: 80vh; object-fit: contain;";
+    try {
+      document.execCommand("copy");
+      setCopyStatus("URL이 복사되었습니다!");
+    } catch (error) {
+      setCopyStatus("복사 실패. URL: " + error);
+    }
 
-    // Create instruction text
-    const instructions = document.createElement("p");
-    instructions.textContent = "이미지를 길게 누르면 저장할 수 있습니다";
-    instructions.style.cssText =
-      "color: white; margin-top: 20px; font-family: -apple-system, sans-serif;";
-
-    // Create close button
-    const closeButton = document.createElement("button");
-    closeButton.textContent = "닫기";
-    closeButton.style.cssText = `
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      background: none;
-      border: none;
-      color: white;
-      font-size: 16px;
-      padding: 10px;
-      cursor: pointer;
-      font-family: -apple-system, sans-serif;
-    `;
-
-    closeButton.onclick = () => {
-      imageFrame.style.display = "none";
-    };
-
-    // Add elements to overlay
-    imageFrame.appendChild(closeButton);
-    imageFrame.appendChild(img);
-    imageFrame.appendChild(instructions);
-
-    // Show overlay
-    imageFrame.style.display = "flex";
-  };
+    document.body.removeChild(textArea);
+    setTimeout(() => setCopyStatus(""), 2000);
+  }, []);
 
   const handleDownload = async () => {
     if (!currentImageUrl) return;
@@ -102,7 +65,6 @@ export const BottomBar: React.FC<ExtendedBottomBarProps> = ({
     try {
       const formData = new FormData();
       formData.append("thumbnail", currentImageUrl);
-
       const randomUserId = Math.floor(Math.random() * 1000) + 1;
 
       const response = await axios.post(
@@ -122,9 +84,9 @@ export const BottomBar: React.FC<ExtendedBottomBarProps> = ({
       }
 
       if (isMobile) {
-        showImage(thumbnailUrl);
+        setImageUrl(thumbnailUrl);
+        copyToClipboard(thumbnailUrl);
       } else {
-        // Desktop download
         const link = document.createElement("a");
         link.href = thumbnailUrl;
         link.download = `image-${Date.now()}.png`;
@@ -134,6 +96,12 @@ export const BottomBar: React.FC<ExtendedBottomBarProps> = ({
       }
     } catch (error) {
       console.error("이미지 업로드/다운로드 중 오류 발생:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "알 수 없는 오류가 발생했습니다.";
+      setCopyStatus(`오류: ${errorMessage}`);
+      setTimeout(() => setCopyStatus(""), 3000);
     }
   };
 
@@ -160,22 +128,37 @@ export const BottomBar: React.FC<ExtendedBottomBarProps> = ({
           </div>
         )}
 
-        <Button
-          variant={mode === "remove" ? "danger" : "primary"}
-          size="lg"
-          onClick={mode === "remove" ? onRemove : handleDownload}
-          disabled={isLoading || (mode === "edit" && !currentImageUrl)}
-          className="w-full"
-        >
-          {mode === "remove" ? (
-            "선택 영역 제거하기"
-          ) : (
-            <div className="flex items-center justify-center gap-2">
-              <Download size={20} />
-              <span>이미지 {isMobile ? "저장" : "다운로드"}</span>
+        <div className="flex flex-col gap-2">
+          <Button
+            variant={mode === "remove" ? "danger" : "primary"}
+            size="lg"
+            onClick={mode === "remove" ? onRemove : handleDownload}
+            disabled={isLoading || (mode === "edit" && !currentImageUrl)}
+            className="w-full"
+          >
+            {mode === "remove" ? (
+              "선택 영역 제거하기"
+            ) : (
+              <div className="flex items-center justify-center gap-2">
+                {isMobile ? <Link size={20} /> : <Download size={20} />}
+                <span>이미지 {isMobile ? "URL 복사" : "다운로드"}</span>
+              </div>
+            )}
+          </Button>
+          {copyStatus && (
+            <div className="text-center text-sm text-gray-600">
+              {copyStatus}
             </div>
           )}
-        </Button>
+          {imageUrl && isMobile && (
+            <div
+              className="text-center text-sm text-blue-600 break-all p-2"
+              onClick={() => copyToClipboard(imageUrl)}
+            >
+              {imageUrl}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
