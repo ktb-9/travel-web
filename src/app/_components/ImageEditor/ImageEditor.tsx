@@ -306,7 +306,7 @@ export const ImageEditor: React.FC = () => {
         formData.append("prompt", prompt.trim());
       }
 
-      const response = await fetch("https://ai.zero-dang.com/api/edit-image", {
+      const response = await fetch("http://localhost:5001/api/edit-image", {
         method: "POST",
         body: formData,
       });
@@ -474,6 +474,7 @@ export const ImageEditor: React.FC = () => {
         onPromptChange={setPrompt}
         onEdit={() => handleEditImage("edit")}
         onRemove={() => handleEditImage("remove")}
+        currentImageUrl={image}
       />
 
       {isLoading && <LoadingOverlay />}
