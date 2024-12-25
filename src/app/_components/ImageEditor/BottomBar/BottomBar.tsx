@@ -2,9 +2,11 @@ import { Send, Download } from "lucide-react";
 import { BottomBarProps } from "../../../../../type/BottomBar/BottomBar";
 import { IconButton } from "../../Common/IconButton/IconButton";
 import { Button } from "../../Common/Button/Button";
+import axios from "axios";
+import { useEffect, useState } from "react";
 
 interface ExtendedBottomBarProps extends BottomBarProps {
-  currentImageUrl?: string; // Optional URL of the current image
+  currentImageUrl: File | null;
 }
 
 export const BottomBar: React.FC<ExtendedBottomBarProps> = ({
@@ -16,32 +18,122 @@ export const BottomBar: React.FC<ExtendedBottomBarProps> = ({
   onRemove,
   currentImageUrl,
 }) => {
+  const [isMobile, setIsMobile] = useState(false);
+  const [imageFrame, setImageFrame] = useState<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setIsMobile(/iPhone|iPad|iPod|Android/i.test(window.navigator.userAgent));
+
+    // Create overlay container
+    const overlay = document.createElement("div");
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.9);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      z-index: 9999;
+      padding: 20px;
+    `;
+
+    document.body.appendChild(overlay);
+    setImageFrame(overlay);
+
+    return () => {
+      document.body.removeChild(overlay);
+    };
+  }, []);
+
+  const showImage = (imageUrl: string) => {
+    if (!imageFrame) return;
+
+    // Clear previous content
+    imageFrame.innerHTML = "";
+
+    // Create image element
+    const img = document.createElement("img");
+    img.src = imageUrl;
+    img.style.cssText =
+      "max-width: 100%; max-height: 80vh; object-fit: contain;";
+
+    // Create instruction text
+    const instructions = document.createElement("p");
+    instructions.textContent = "이미지를 길게 누르면 저장할 수 있습니다";
+    instructions.style.cssText =
+      "color: white; margin-top: 20px; font-family: -apple-system, sans-serif;";
+
+    // Create close button
+    const closeButton = document.createElement("button");
+    closeButton.textContent = "닫기";
+    closeButton.style.cssText = `
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: none;
+      border: none;
+      color: white;
+      font-size: 16px;
+      padding: 10px;
+      cursor: pointer;
+      font-family: -apple-system, sans-serif;
+    `;
+
+    closeButton.onclick = () => {
+      imageFrame.style.display = "none";
+    };
+
+    // Add elements to overlay
+    imageFrame.appendChild(closeButton);
+    imageFrame.appendChild(img);
+    imageFrame.appendChild(instructions);
+
+    // Show overlay
+    imageFrame.style.display = "flex";
+  };
+
   const handleDownload = async () => {
     if (!currentImageUrl) return;
 
     try {
-      // Fetch the image as a blob
-      const response = await fetch(currentImageUrl);
-      const blob = await response.blob();
+      const formData = new FormData();
+      formData.append("thumbnail", currentImageUrl);
 
-      // Create a temporary URL for the blob
-      const url = window.URL.createObjectURL(blob);
+      const randomUserId = Math.floor(Math.random() * 1000) + 1;
 
-      // Create a temporary anchor element
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `edited-image-${Date.now()}.png`; // Dynamic filename with timestamp
+      const response = await axios.post(
+        `https://server.zero-dang.com/image/${randomUserId}`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
 
-      // Programmatically click the link to trigger download
-      document.body.appendChild(link);
-      link.click();
+      const { thumbnailUrl } = response.data;
 
-      // Clean up
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      if (!thumbnailUrl) {
+        throw new Error("썸네일 URL을 받아오지 못했습니다.");
+      }
+
+      if (isMobile) {
+        showImage(thumbnailUrl);
+      } else {
+        // Desktop download
+        const link = document.createElement("a");
+        link.href = thumbnailUrl;
+        link.download = `image-${Date.now()}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
     } catch (error) {
-      console.error("Error downloading image:", error);
-      // You might want to add error handling here
+      console.error("이미지 업로드/다운로드 중 오류 발생:", error);
     }
   };
 
@@ -80,7 +172,7 @@ export const BottomBar: React.FC<ExtendedBottomBarProps> = ({
           ) : (
             <div className="flex items-center justify-center gap-2">
               <Download size={20} />
-              <span>이미지 다운로드</span>
+              <span>이미지 {isMobile ? "저장" : "다운로드"}</span>
             </div>
           )}
         </Button>

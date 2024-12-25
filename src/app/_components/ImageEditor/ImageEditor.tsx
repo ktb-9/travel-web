@@ -474,6 +474,7 @@ export const ImageEditor: React.FC = () => {
         onPromptChange={setPrompt}
         onEdit={() => handleEditImage("edit")}
         onRemove={() => handleEditImage("remove")}
+        currentImageUrl={image}
       />
 
       {isLoading && <LoadingOverlay />}
